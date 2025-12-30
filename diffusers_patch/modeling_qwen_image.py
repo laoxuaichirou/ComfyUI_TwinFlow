@@ -304,6 +304,7 @@ class QwenImage(torch.nn.Module):
         prompt_embeds=None,
         prompt_attention_mask=None,
         return_latents=True,
+        block_num=0,
     ):
         do_cfg = cfg_scale > 0.0      
         
@@ -318,8 +319,13 @@ class QwenImage(torch.nn.Module):
         else:
             #model_device = next(self.transformer.transformer.parameters()).device
             #print(model_device)
-            prompt_embeds.to(self.transformer.transformer.device,self.imgs_dtype)
-            prompt_attention_mask.to(self.transformer.transformer.device,self.imgs_dtype)
+            
+            if block_num>0:
+                prompt_embeds=prompt_embeds.to(self.transformer.transformer.device,self.imgs_dtype)
+                prompt_attention_mask=prompt_attention_mask.to(self.transformer.transformer.device,self.imgs_dtype)
+            else:
+                prompt_embeds=prompt_embeds.to(self.device,self.imgs_dtype)
+                prompt_attention_mask=prompt_attention_mask.to(self.device,self.imgs_dtype)
             batch_size=prompt_embeds.shape[0]
 
 

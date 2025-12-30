@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from typing import Callable, Union
+from tqdm import tqdm
 
 
 class Linear:
@@ -51,6 +52,7 @@ class UnifiedSampler(torch.nn.Module):
         dent = self.alpha_in(t) * self.gamma_to(t) - self.gamma_in(t) * self.alpha_to(t)
         q = torch.ones(x_t.size(0), device=x_t.device) * (t).flatten()
         q = q if self.integ_st == 1 else 1 - q
+
         F_t = (-1) ** (1 - self.integ_st) * model(x_t, t=q, tt=tt, **model_kwargs)
         t = torch.abs(t)
         z_hat = (x_t * self.gamma_to(t) - F_t * self.gamma_in(t)) / dent
@@ -77,6 +79,7 @@ class UnifiedSampler(torch.nn.Module):
         Performs unified sampling to generate data samples from the learned distribution.
         """
         input_dtype = inital_noise_z.dtype
+        #print(f"Sampling with {input_dtype} order")
         assert sampling_order in [1, 2]
         num_steps = (sampling_steps + 1) // 2 if sampling_order == 2 else sampling_steps
 
@@ -95,12 +98,24 @@ class UnifiedSampler(torch.nn.Module):
         # Main sampling loop
         x_cur = inital_noise_z.to(torch.float64)
         samples = [inital_noise_z.cpu()]
-        for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):
+        
+        # 添加tqdm进度条
+        total_steps = len(t_steps) - 1
+        progress_bar = tqdm(
+            enumerate(zip(t_steps[:-1], t_steps[1:])),
+            total=total_steps,
+            desc="Sampling",
+            unit="step"
+        )
+        
+        for i, (t_cur, t_next) in progress_bar:
             # First order prediction
+            x_cur=x_cur.to(input_dtype)
+            t_cur=t_cur.to(input_dtype)
             x_hat, z_hat, _, _ = self.forward(
                 sampling_model,
-                x_cur.to(input_dtype),
-                t_cur.to(input_dtype),
+                x_cur,
+                t_cur,
                 torch.zeros_like(t_cur),
                 **model_kwargs,
             )
@@ -148,5 +163,13 @@ class UnifiedSampler(torch.nn.Module):
                 ) * (0.5 * z_hat + 0.5 * z_pri)
 
             x_cur = x_next
+            
+            # 更新进度条描述
+            progress_bar.set_postfix({
+                "step": f"{i+1}/{total_steps}",
+                "t_cur": f"{t_cur.item():.3f}",
+                "t_next": f"{t_next.item():.3f}"
+            })
 
+        progress_bar.close()
         return torch.stack(samples, dim=0).to(input_dtype)

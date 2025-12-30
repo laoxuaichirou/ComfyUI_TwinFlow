@@ -6,6 +6,7 @@ import torch
 import os
 from diffusers.hooks import apply_group_offloading
 from .diffusers_patch.modeling_qwen_image import QwenImage
+from .diffusers_patch.z_image.modeling_z_image import ZImage
 import folder_paths
 from typing_extensions import override
 from comfy_api.latest import ComfyExtension, io
@@ -47,11 +48,13 @@ class TwinFlow_SM_Model(io.ComfyNode):
     @classmethod
     def execute(cls, dit,gguf,) -> io.NodeOutput:
         dit_path=folder_paths.get_full_path("diffusion_models", dit) if dit != "none" else None
-        gguf_path=folder_paths.get_full_path("gguf", gguf) if gguf != "none" else None    
-        model = QwenImage( os.path.join(node_cr_path, "Qwen-Image"),dit_path,gguf_path, aux_time_embed=True, device="cpu")   
+        gguf_path=folder_paths.get_full_path("gguf", gguf) if gguf != "none" else None 
+
+        if any(path and 'qwen' in path.lower() for path in [dit_path, gguf_path]):
+            model = QwenImage( os.path.join(node_cr_path, "Qwen-Image"),dit_path,gguf_path, aux_time_embed=True, device="cpu")   
+        else:
+            model = ZImage( os.path.join(node_cr_path, "Z-Image"),dit_path,gguf_path, aux_time_embed=True, device="cpu")
         return io.NodeOutput(model)
-
-
 
 
 class TwinFlow_SM_KSampler(io.ComfyNode):
@@ -69,25 +72,33 @@ class TwinFlow_SM_KSampler(io.ComfyNode):
                 io.Combo.Input("steps", [2,4]),
                 io.Int.Input("seed", default=0, min=0, max=MAX_SEED,display_mode=io.NumberDisplay.number),
                 io.Int.Input("block_num", default=10, min=0, max=MAX_SEED,display_mode=io.NumberDisplay.number),
+                io.Combo.Input("force_offload", ["all", "none","clip"]),
             ], # io.Float.Input("noise", default=0.0, min=0.0, max=1.0,step=0.01,display_mode=io.NumberDisplay.number),
             outputs=[
                 io.Latent.Output(display_name="latents"),
             ],
         )
     @classmethod
-    def execute(cls, model,positive,width,height,steps,seed,block_num,) -> io.NodeOutput:
-
-        batch_size, seq_len, _ = positive[0][0].shape
+    def execute(cls, model,positive,width,height,steps,seed,block_num,force_offload) -> io.NodeOutput:
+        raw_embeds=positive[0][0]
+        if raw_embeds.dtype == torch.uint8 or not raw_embeds.is_floating_point(): #sometimes clip embeds are uint8 dtype @klossm
+            raw_embeds = raw_embeds.to(torch.float32)
+        batch_size, seq_len, _ = raw_embeds.shape
         prompt_attention_mask = torch.ones(batch_size, seq_len, dtype=torch.long, device=device)
         prompt_attention_mask = prompt_attention_mask.repeat(1, 1, 1)
         prompt_attention_mask = prompt_attention_mask.view(batch_size * 1, seq_len)
 
-        cf_models=mm.loaded_models()
-        try:
-            for pipe in cf_models:   
-                pipe.unpatch_model(device_to=torch.device("cpu"))
-                print(f"Unpatching models.{pipe}")
-        except: pass
+        if force_offload!="none":
+            cf_models=mm.loaded_models()
+            try:
+                for pipe in cf_models:
+                    if force_offload=="clip" and "AutoencodingEngine"==type(pipe.model).__name__: 
+                        print("pass vae offload")
+                        continue
+                    pipe.unpatch_model(device_to=torch.device("cpu"))
+                    print(f"Unpatching models.{pipe}")
+            except: pass
+
         mm.soft_empty_cache()
         torch.cuda.empty_cache()
         max_gpu_memory = torch.cuda.max_memory_allocated()
@@ -119,7 +130,11 @@ class TwinFlow_SM_KSampler(io.ComfyNode):
         # apply offloading
             apply_group_offloading(model.transformer.transformer, onload_device=torch.device("cuda"), offload_type="block_level", num_blocks_per_group=block_num)
         else:
-            model.transformer.transformer.to(device)
+            model.model.to(device)
+            model.transformer.to(device)
+            if hasattr(model.transformer, 'transformer'):
+                model.transformer.transformer.to(device)
+            model.device = device
         # infer
         demox = model.sample(
             None ,
@@ -128,22 +143,19 @@ class TwinFlow_SM_KSampler(io.ComfyNode):
             height=height,
             width=width,
             sampler=sampler,
-            prompt_embeds=positive[0][0],
+            prompt_embeds=raw_embeds,
             prompt_attention_mask=prompt_attention_mask,
+            block_num=block_num,
         )
-        print(demox.shape)
-        if len(demox.shape)!=5:
-            demox=demox.unsqueeze(0)
+        #print(demox.shape) #torch.Size([1, 16, 128, 96])
+        if len(demox.shape)!=5 and isinstance(model, QwenImage): #qwen need 5D
+            demox=demox.unsqueeze(0) 
         out={"samples":demox} #BCTHW
-        if block_num==0:
-            model.transformer.transformer.to("cpu")
+        # if block_num==0: # don't offload
+        #     model.transformer.transformer.to("cpu")
         return io.NodeOutput(out)
 
-from aiohttp import web
-from server import PromptServer
-@PromptServer.instance.routes.get("/TwinFlow_SM_Extension")
-async def get_hello(request):
-    return web.json_response("TwinFlow_SM_Extension")
+
 
 class TwinFlow_SM_Extension(ComfyExtension):
     @override

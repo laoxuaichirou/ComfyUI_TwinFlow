@@ -106,6 +106,8 @@ class QwenImageTransformer2DModelWrapper(QwenImageTransformer2DModel):
                 )
         #防御性dtype不匹配
         hd_dtyep=next(self.img_in.parameters()).dtype
+        # print("hd_dtyep",hd_dtyep) #torch.uint8 ?
+        # print("hidden_states.dtype",hidden_states.dtype)# torch.bfloat16
         if hd_dtyep!=hidden_states.dtype:
             hidden_states=hidden_states.to(hd_dtyep)
 
