@@ -2,9 +2,10 @@
 [TwinFlow](https://github.com/inclusionAI/TwinFlow): Realizing One-step Generation on Large Models with Self-adversarial Flows,you can use it in comfyUI
 
 # Tips
+* Add @oliveagle PR,try use lora when infer 4 steps,
 * clip ：only unload comfy clip ，none：don't unload any ，all，unload all  comfyUI模型卸载模式，clip是保留vae，all是全卸载，none是不卸载（需要大显存）
 * support z-image，fix bug ，fix qwen-image gguf （need replace）/ qwen-image的gguf做了重新量化，请更新避免dtype错误；
-* z-image Q8 ，12G 1024*768 2-3s/pic , /12G Q8 不开启卸载，1027*768 2-3秒1张图
+* z-image Q8 ，12G 1024X768 2-3s/pic , 24G Vram 1.3s/pic  /12G Q8 不开启卸载，1027X768 2-3秒1张图,24G 约1.3秒1张
 * qwen-image infer 1027*768 in 12G Vram just need 15s / 12G (50 block)显存 开GPU卸载 单图12G vram只需要15秒 (50 block)
 * if VRAM>16, set block number to 0 to use high VRAM / 大显存设置lock number为0 以达到最快推理速度；
 
