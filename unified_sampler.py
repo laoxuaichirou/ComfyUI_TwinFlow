@@ -1,8 +1,7 @@
 import torch
 from torch import nn
-from typing import Callable, Union
 from tqdm import tqdm
-
+from typing import List, Callable, Union, Literal
 
 class Linear:
     def alpha_in(self, t):
@@ -73,6 +72,7 @@ class UnifiedSampler(torch.nn.Module):
         sampling_order: int = 1,
         time_dist_ctrl: list = [1.0, 1.0, 1.0],
         rfba_gap_steps: list = [0.0, 0.0],
+        sampling_style: Literal["few", "mul", "any"] = "few",
         **model_kwargs,
     ):
         """
@@ -110,13 +110,21 @@ class UnifiedSampler(torch.nn.Module):
         
         for i, (t_cur, t_next) in progress_bar:
             # First order prediction
-            x_cur=x_cur.to(input_dtype)
-            t_cur=t_cur.to(input_dtype)
+
+            if sampling_style == "few":
+                t_tgt = torch.zeros_like(t_cur)
+            elif sampling_style == "mul":
+                t_tgt = t_cur
+            elif sampling_style == "any":
+                t_tgt = t_next
+            else:
+                raise ValueError(f"Unknown sampling style: {sampling_style}")
+
             x_hat, z_hat, _, _ = self.forward(
                 sampling_model,
-                x_cur,
-                t_cur,
-                torch.zeros_like(t_cur),
+                x_cur.to(input_dtype),
+                t_cur.to(input_dtype),
+                t_tgt.to(input_dtype),
                 **model_kwargs,
             )
             samples.append(x_hat.cpu())

@@ -69,17 +69,18 @@ class TwinFlow_SM_KSampler(io.ComfyNode):
                 io.Conditioning.Input("positive"), 
                 io.Int.Input("width", default=1024, min=512, max=nodes.MAX_RESOLUTION,step=16,display_mode=io.NumberDisplay.number),
                 io.Int.Input("height", default=1024, min=512, max=nodes.MAX_RESOLUTION,step=16,display_mode=io.NumberDisplay.number),
-                io.Combo.Input("steps", [2,4]),
+                io.Int.Input("steps", default=2, min=1, max=nodes.MAX_RESOLUTION,step=1,display_mode=io.NumberDisplay.number),
                 io.Int.Input("seed", default=0, min=0, max=MAX_SEED,display_mode=io.NumberDisplay.number),
                 io.Int.Input("block_num", default=10, min=0, max=MAX_SEED,display_mode=io.NumberDisplay.number),
                 io.Combo.Input("force_offload", ["all", "none","clip"], default="none"),
+                io.Combo.Input("sampling_style", ["any", "mul",], default="any"),
             ], # io.Float.Input("noise", default=0.0, min=0.0, max=1.0,step=0.01,display_mode=io.NumberDisplay.number),
             outputs=[
                 io.Latent.Output(display_name="latents"),
             ],
         )
     @classmethod
-    def execute(cls, model,positive,width,height,steps,seed,block_num,force_offload) -> io.NodeOutput:
+    def execute(cls, model,positive,width,height,steps,seed,block_num,force_offload,sampling_style) -> io.NodeOutput:
         raw_embeds=positive[0][0]
         if raw_embeds.dtype == torch.uint8 or not raw_embeds.is_floating_point(): #sometimes clip embeds are uint8 dtype @klossm
             raw_embeds = raw_embeds.to(torch.float32)
@@ -104,25 +105,40 @@ class TwinFlow_SM_KSampler(io.ComfyNode):
         max_gpu_memory = torch.cuda.max_memory_allocated()
         print(f"After Max GPU memory allocated: {max_gpu_memory / 1000 ** 3:.2f} GB")
        
-        if 4==steps:
-            # # 4 NFE config
+        if 2>=steps:
+            # few
+            stochast_ratio=0.8 if steps==1 else 1.0
             sampler_config = {
-                "sampling_steps": 4,
-                "stochast_ratio": 1.0,
+                "sampling_steps": steps, #1,2
+                "stochast_ratio": stochast_ratio,
+                "extrapol_ratio": 0.0,
+                "sampling_order": 1,
+                "time_dist_ctrl": [1.0, 1.0, 1.0],
+                "rfba_gap_steps": [0.001, 0.7],
+                "sampling_style": "few"
+            }
+        elif 2<steps and sampling_style=="any":
+            # any
+            sampler_config = {
+                "sampling_steps": steps,
+                "stochast_ratio": 0.0,
                 "extrapol_ratio": 0.0,
                 "sampling_order": 1,
                 "time_dist_ctrl": [1.0, 1.0, 1.0],
                 "rfba_gap_steps": [0.001, 0.5],
-            }
+                "sampling_style": sampling_style
+                }
+
         else:
             # 2 NFE config
             sampler_config = {
-                "sampling_steps": 2,
-                "stochast_ratio": 1.0,
+                "sampling_steps": steps,
+                "stochast_ratio": 0.0,
                 "extrapol_ratio": 0.0,
                 "sampling_order": 1,
-                "time_dist_ctrl": [1.0, 1.0, 1.0],
-                "rfba_gap_steps": [0.001, 0.6],
+                "time_dist_ctrl": [1.17, 0.8, 1.1],
+                "rfba_gap_steps": [0.001, 0.0],
+                "sampling_style": sampling_style
             }
 
         sampler = partial(UnifiedSampler().sampling_loop, **sampler_config)

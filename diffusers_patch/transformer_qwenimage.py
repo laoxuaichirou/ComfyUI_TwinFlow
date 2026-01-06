@@ -136,8 +136,8 @@ class QwenImageTransformer2DModelWrapper(QwenImageTransformer2DModel):
             if guidance is None
             else self.time_text_embed_2(target_timestep, guidance, hidden_states)
         )
-        temb = temb + temb_2 * timestep.unsqueeze(1)
-
+        temb = temb + temb_2 * (timestep - target_timestep).unsqueeze(1)
+        
         image_rotary_emb = self.pos_embed(img_shapes, txt_seq_lens, device=hidden_states.device)
 
         for index_block, block in enumerate(self.transformer_blocks):

@@ -236,123 +236,6 @@
       ]
     },
     {
-      "id": 3,
-      "type": "CLIPTextEncode",
-      "pos": [
-        21710.92881670131,
-        -371.9024793777879
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 6,
-      "mode": 2,
-      "inputs": [
-        {
-          "name": "clip",
-          "type": "CLIP",
-          "link": 3
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            2
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "CLIPTextEncode"
-      },
-      "widgets_values": [
-        "超高清壁纸, 梦幻光影, 少女在元宵灯会中回眸一笑, 提着一盏兔子花灯, 周围挂满明亮的灯笼, 暖色调灯光映照在脸上, 华丽的唐装, 繁复的头饰, 热闹的背景虚化, 焦外光斑美丽, 中景镜头。"
-      ]
-    },
-    {
-      "id": 2,
-      "type": "TwinFlow_SM_KSampler",
-      "pos": [
-        22138.164638728722,
-        -393.16239369676924
-      ],
-      "size": [
-        270,
-        222
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 2,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "TwinFlow_SM_Model",
-          "link": 1
-        },
-        {
-          "name": "positive",
-          "type": "CONDITIONING",
-          "link": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "latents",
-          "type": "LATENT",
-          "links": [
-            4
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "TwinFlow_SM_KSampler"
-      },
-      "widgets_values": [
-        768,
-        1024,
-        2,
-        1549890579,
-        "randomize",
-        4,
-        "all"
-      ]
-    },
-    {
-      "id": 1,
-      "type": "TwinFlow_SM_Model",
-      "pos": [
-        21412.775193975598,
-        -490.5572147869311
-      ],
-      "size": [
-        353.7272467794319,
-        82
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 2,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "TwinFlow_SM_Model",
-          "links": [
-            1
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "TwinFlow_SM_Model"
-      },
-      "widgets_values": [
-        "none",
-        "TwinFlow-Qwen-Image-diffusers-Q6_K.gguf"
-      ]
-    },
-    {
       "id": 9,
       "type": "VAELoader",
       "pos": [
@@ -364,7 +247,7 @@
         58
       ],
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -381,86 +264,6 @@
       },
       "widgets_values": [
         "ae.safetensors"
-      ]
-    },
-    {
-      "id": 10,
-      "type": "TwinFlow_SM_Model",
-      "pos": [
-        21403.32617360214,
-        26.928730497579142
-      ],
-      "size": [
-        376.2346986477314,
-        82
-      ],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "TwinFlow_SM_Model",
-          "links": [
-            11
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "TwinFlow_SM_Model"
-      },
-      "widgets_values": [
-        "none",
-        "TwinFlow-Z-Image-Turbo-diffuser-Q8_0.gguf"
-      ]
-    },
-    {
-      "id": 12,
-      "type": "TwinFlow_SM_KSampler",
-      "pos": [
-        22187.392821539248,
-        72.57333549950114
-      ],
-      "size": [
-        270,
-        222
-      ],
-      "flags": {},
-      "order": 9,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "TwinFlow_SM_Model",
-          "link": 11
-        },
-        {
-          "name": "positive",
-          "type": "CONDITIONING",
-          "link": 10
-        }
-      ],
-      "outputs": [
-        {
-          "name": "latents",
-          "type": "LATENT",
-          "links": [
-            8
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "TwinFlow_SM_KSampler"
-      },
-      "widgets_values": [
-        1024,
-        1024,
-        2,
-        1741255191,
-        "randomize",
-        0,
-        "clip"
       ]
     },
     {
@@ -498,6 +301,205 @@
       },
       "widgets_values": [
         "一位亚洲模特身着华丽的时装，正在时装秀上展现风采。模特位于舞台中央，背景是华丽的舞台布景，灯光从舞台后方投射，照亮模特的面部和服装。整个场景呈现出梦幻的氛围，镜头从模特的腰部以上进行仰拍，使用长焦镜头，镜头焦距为85mm，以f/2.8的光圈拍摄，背景清晰，模特身体完美呈现，皮肤纹理清晰。整个画面采用高分辨率，色彩鲜艳，呈现出清晰的细节，渲染出一种时尚感。画面采用数字摄影，以保证画面的清晰度和细节。"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "TwinFlow_SM_Model",
+      "pos": [
+        21403.32617360214,
+        26.928730497579142
+      ],
+      "size": [
+        376.2346986477314,
+        82
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TwinFlow_SM_Model"
+      },
+      "widgets_values": [
+        "none",
+        "TwinFlow-Z-Image-Turbo-diffuser-context-Q8_0.gguf"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "CLIPTextEncode",
+      "pos": [
+        21737.194790542802,
+        -345.63653559530366
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 2,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "超高清壁纸, 梦幻光影, 少女在元宵灯会中回眸一笑, 提着一盏兔子花灯, 周围挂满明亮的灯笼, 暖色调灯光映照在脸上, 华丽的唐装, 繁复的头饰, 热闹的背景虚化, 焦外光斑美丽, 中景镜头。"
+      ]
+    },
+    {
+      "id": 1,
+      "type": "TwinFlow_SM_Model",
+      "pos": [
+        21393.07572862398,
+        -471.9521675169633
+      ],
+      "size": [
+        353.7272467794319,
+        82
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 2,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TwinFlow_SM_Model"
+      },
+      "widgets_values": [
+        "none",
+        "TwinFlow-Qwen-Image-diffusers-fix-Q8_0.gguf"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "TwinFlow_SM_KSampler",
+      "pos": [
+        22165.525060710846,
+        -383.3126610209628
+      ],
+      "size": [
+        270,
+        246
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 2,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "latents",
+          "type": "LATENT",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TwinFlow_SM_KSampler"
+      },
+      "widgets_values": [
+        1024,
+        1024,
+        1,
+        1434124021,
+        "randomize",
+        30,
+        "clip",
+        "any"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "TwinFlow_SM_KSampler",
+      "pos": [
+        22187.392821539248,
+        72.57333549950114
+      ],
+      "size": [
+        270,
+        246
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 11
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "latents",
+          "type": "LATENT",
+          "links": [
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TwinFlow_SM_KSampler"
+      },
+      "widgets_values": [
+        1024,
+        1024,
+        1,
+        535671795,
+        "randomize",
+        0,
+        "clip",
+        "any"
       ]
     }
   ],
@@ -630,10 +632,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.6934334949442206,
+      "scale": 0.8390545288825074,
       "offset": [
-        -20657.48545614447,
-        711.1482483592973
+        -20823.828348216695,
+        637.783099393051
       ]
     },
     "workflowRendererVersion": "LG",
