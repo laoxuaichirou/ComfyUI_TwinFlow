@@ -75,42 +75,40 @@ def get_timestep_embedding(
 
 
 class TimestepEmbedder(nn.Module):
-    """
-    Embeds scalar timesteps into vector representations.
-    
-    This is a standard DiT-style timestep embedder that uses sinusoidal embeddings
-    followed by an MLP to project to the desired dimension.
-    """
-    
-    def __init__(
-        self,
-        hidden_size: int,
-        frequency_embedding_size: int = 256,
-        mid_size: Optional[int] = None,
-    ):
+    def __init__(self, out_size, mid_size=None, frequency_embedding_size=256):
         super().__init__()
-        self.hidden_size = hidden_size
-        self.frequency_embedding_size = frequency_embedding_size
-        
         if mid_size is None:
-            mid_size = hidden_size
-        
+            mid_size = out_size
         self.mlp = nn.Sequential(
             nn.Linear(frequency_embedding_size, mid_size, bias=True),
             nn.SiLU(),
-            nn.Linear(mid_size, hidden_size, bias=True),
+            nn.Linear(mid_size, out_size, bias=True),
         )
 
-    def forward(self, t: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            t: 1-D Tensor of N timestep values
-            
-        Returns:
-            Tensor of shape [N, hidden_size] with timestep embeddings
-        """
-        t_freq = get_timestep_embedding(t, self.frequency_embedding_size)
-        t_emb = self.mlp(t_freq.to(self.mlp[0].weight.dtype))
+        self.frequency_embedding_size = frequency_embedding_size
+
+    @staticmethod
+    def timestep_embedding(t, dim, max_period=10000):
+        with torch.amp.autocast("cuda", enabled=False):
+            half = dim // 2
+            freqs = torch.exp(
+                -math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32, device=t.device) / half
+            )
+            args = t[:, None].float() * freqs[None]
+            embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
+            if dim % 2:
+                embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
+            return embedding
+
+    def forward(self, t):
+        t_freq = self.timestep_embedding(t, self.frequency_embedding_size)
+        weight_dtype = self.mlp[0].weight.dtype
+        compute_dtype = getattr(self.mlp[0], "compute_dtype", None) # gguf need to know the compute_dtype
+        if weight_dtype.is_floating_point:
+            t_freq = t_freq.to(weight_dtype)
+        elif compute_dtype is not None:
+            t_freq = t_freq.to(compute_dtype)
+        t_emb = self.mlp(t_freq)
         return t_emb
 
 

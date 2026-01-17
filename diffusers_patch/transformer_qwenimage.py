@@ -16,7 +16,7 @@ from typing import Union, List, Optional, Dict, Any, Callable, Tuple
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-class QwenImageTransformer2DModelWrapper(QwenImageTransformer2DModel):
+class QwenImageTransformer2DModel(QwenImageTransformer2DModel):
     @register_to_config
     def __init__(
         self,
