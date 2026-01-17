@@ -7,20 +7,20 @@ import diffusers
 # )
 from diffusers import GGUFQuantizationConfig
 from peft import PeftModel
-from .transformer_z_image import ZImageTransformer2DModelWrapper, ZImageTransformer2DModel, logger
+from .transformer_z_image_ import ZImageTransformer2DModel
 from .pipeline_z_image import ZImagePipeline
 from contextlib import contextmanager
 import sys
 from omegaconf import OmegaConf
 #from services.tools import create_logger
 
-# Permanently patch diffusers to include ZImageTransformer2DModel if not present
-if not hasattr(diffusers, 'ZImageTransformer2DModel'):
-    diffusers.ZImageTransformer2DModel = ZImageTransformer2DModel
-    # Also patch the models.transformers module if it exists
-    if hasattr(diffusers, 'models') and hasattr(diffusers.models, 'transformers'):
-        if not hasattr(diffusers.models.transformers, 'ZImageTransformer2DModel'):
-            diffusers.models.transformers.ZImageTransformer2DModel = ZImageTransformer2DModel
+# # Permanently patch diffusers to include ZImageTransformer2DModel if not present
+# if not hasattr(diffusers, 'ZImageTransformer2DModel'):
+#     diffusers.ZImageTransformer2DModel = ZImageTransformer2DModel
+#     # Also patch the models.transformers module if it exists
+#     if hasattr(diffusers, 'models') and hasattr(diffusers.models, 'transformers'):
+#         if not hasattr(diffusers.models.transformers, 'ZImageTransformer2DModel'):
+#             diffusers.models.transformers.ZImageTransformer2DModel = ZImageTransformer2DModel
 
 @contextmanager
 def temp_patch_module_attr(module_name: str, attr_name: str, new_obj):
@@ -196,31 +196,18 @@ class ZImage(torch.nn.Module):
 
         self.aux_time_embed = aux_time_embed
          #if aux_time_embed:
-        with temp_patch_module_attr("diffusers", "ZImageTransformer2DModel", ZImageTransformer2DModelWrapper):
-            #         transformer_cls = QwenImageTransformer2DModelWrapper
-            # else:
-            #     transformer_cls = QwenImageTransformer2DModel
+        with temp_patch_module_attr("diffusers", "ZImageTransformer2DModel", ZImageTransformer2DModel):
             if dit_path is not None:
-                z_image_transformer = ZImageTransformer2DModelWrapper.from_single_file(dit_path,config=os.path.join(model_id, "transformer"),torch_dtype=torch.bfloat16)  
+                z_image_transformer = ZImageTransformer2DModel.from_single_file(dit_path,config=os.path.join(model_id, "transformer"),torch_dtype=torch.bfloat16)  
             elif gguf_path is not None:
-                z_image_transformer = ZImageTransformer2DModelWrapper.from_single_file(
+                z_image_transformer = ZImageTransformer2DModel.from_single_file(
                     gguf_path,
                     config=os.path.join(model_id, "transformer"),
                     quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
                     torch_dtype=torch.bfloat16,) 
             else:
                 raise ValueError("Please provide either dit_path or gguf_path")
-        # if aux_time_embed:
-        #     transformer_cls = ZImageTransformer2DModelWrapper
-        # else:
-        #     transformer_cls = ZImageTransformer2DModel
-        
-        # z_image_transformer = qwen_transformer.from_pretrained(
-        #     model_id,
-        #     subfolder="transformer",
-        #     torch_dtype=imgs_dtype,
-        #     low_cpu_mem_usage=False,
-        # )
+
         VAE=OmegaConf.load(os.path.join(model_id, "vae/config.json")) 
         self.model_type = model_type
         if model_type == 't2i':

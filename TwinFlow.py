@@ -167,8 +167,7 @@ class TwinFlow_SM_KSampler(io.ComfyNode):
         if len(demox.shape)!=5 and isinstance(model, QwenImage): #qwen need 5D
             demox=demox.unsqueeze(0) 
         out={"samples":demox} #BCTHW
-        # if block_num==0: # don't offload
-        #     model.transformer.transformer.to("cpu")
+
         return io.NodeOutput(out)
 
 
@@ -182,8 +181,10 @@ class TwinFlow_SM_LoraLoader(io.ComfyNode):
             category="TwinFlow",
             inputs=[
                 io.Model.Input("model"),
-                io.Combo.Input("lora_name", options=["none"] + folder_paths.get_filename_list("loras")),
-                io.Float.Input("strength", default=1.0, min=-100.0, max=100.0, step=0.01, display_mode=io.NumberDisplay.number),
+                io.Combo.Input("lora_1", options=["none"] + folder_paths.get_filename_list("loras")),
+                io.Combo.Input("lora_2", options=["none"] + folder_paths.get_filename_list("loras")),
+                io.Float.Input("strength_1", default=1.0, min=-0.1, max=10.0, step=0.1, display_mode=io.NumberDisplay.number),
+                io.Float.Input("strength_2", default=1.0, min=-0.1, max=10.0, step=0.1, display_mode=io.NumberDisplay.number),
             ],
             outputs=[
                 io.Model.Output(display_name="model"),
@@ -191,50 +192,55 @@ class TwinFlow_SM_LoraLoader(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, model, lora_name, strength) -> io.NodeOutput:
-        if strength == 0 or lora_name == "none" or not lora_name:
+    def execute(cls, model, lora_1, lora_2,strength_1,strength_2) -> io.NodeOutput:
+
+        lora_1_path=folder_paths.get_full_path("loras", lora_1) if lora_1 != "none" else None
+        lora_2_path=folder_paths.get_full_path("loras", lora_2) if lora_2 != "none" else None
+        lora_list=[i for i in [lora_1_path,lora_2_path] if i is not None]  
+        lora_scales=[strength_1,strength_2]
+
+        if not  lora_list:
             return io.NodeOutput(model)
+        else:
+            
+            if len(lora_list)!=len(lora_scales): #sacles  
+                lora_scales = lora_scales[:1]
+            all_adapters = model.model.get_list_adapters()
+            dit_list=[]
+            if all_adapters:
+                dit_list= all_adapters['transformer']
+            adapter_name_list=[]
+            for path in lora_list:
+                if path is not None:
+                    name=os.path.splitext(os.path.basename(path))[0].replace(".", "_")
+                    adapter_name_list.append(name)
+                    if name in dit_list:
+                        continue
+                    model.model.load_lora_weights(path, adapter_name=name)
+            print(f"成功加载LoRA权重: {adapter_name_list} (scale: {lora_scales})")        
+            model.model.set_adapters(adapter_name_list, adapter_weights=lora_scales)
+            try:
+                active_adapters = model.model.get_active_adapters()
+                all_adapters = model.model.get_list_adapters()
+                print(f"当前激活的适配器: {active_adapters}")
+                print(f"所有可用适配器: {all_adapters}") 
+            except:
+                pass
+            try:
+                dit_list= model.model.get_list_adapters()['transformer']
+                for name in dit_list:
+                    if lora_list :
+                        name_list=[os.path.splitext(os.path.basename(i))[0].replace(".", "_") for i in lora_list ]
+                        if name in name_list: #dit_list
+                            continue
+                        else:
+                            model.model.delete_adapters(name)
+                            print(f"去除dit中未加载的lora: {name}")  
+                    else:
+                        model.model.delete_adapters(name)
+            except:pass
 
-        # Try to find LoRA in ComfyUI loras folder first
-        lora_path = None
-        try:
-            lora_path = folder_paths.get_full_path("loras", lora_name)
-        except:
-            pass
-
-        # If not found, try as direct path
-        if lora_path is None and os.path.exists(lora_name):
-            lora_path = lora_name
-
-        if lora_path is None:
-            print(f"Warning: LoRA '{lora_name}' not found")
             return io.NodeOutput(model)
-
-        # Load LoRA using diffusers' load_lora_weights method
-        try:
-            # Both QwenImage and ZImage wrap a pipeline in self.model
-            pipeline = getattr(model, 'model', None)
-            if pipeline is None:
-                # If no wrapped pipeline, try loading directly on model
-                pipeline = model
-
-            adapter_name = f"lora_{id(model)}"
-            pipeline.load_lora_weights(lora_path, adapter_name=adapter_name)
-            pipeline.set_adapter(adapter_name)
-
-            # Apply strength by scaling the adapter
-            # Note: diffusers LoRA strength is typically applied during forward pass
-            # For exact strength control, we may need to adjust adapter weights
-            if strength != 1.0:
-                print(f"LoRA strength {strength} requested. Note: diffusers LoRA uses weight_name param for adapter selection. Current implementation applies at full strength.")
-
-            print(f"Successfully loaded LoRA: {lora_name}")
-        except Exception as e:
-            print(f"Error loading LoRA: {e}")
-            import traceback
-            traceback.print_exc()
-
-        return io.NodeOutput(model)
 
 
 class TwinFlow_SM_Extension(ComfyExtension):

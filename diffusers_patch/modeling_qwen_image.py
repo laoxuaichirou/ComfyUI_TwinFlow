@@ -1,7 +1,7 @@
 import torch
-from diffusers import  QwenImageTransformer2DModel,GGUFQuantizationConfig
+from diffusers import GGUFQuantizationConfig
 from .pipeline_qwenimage import QwenImagePipeline
-from .transformer_qwenimage import QwenImageTransformer2DModelWrapper
+from .transformer_qwenimage import QwenImageTransformer2DModel
 from contextlib import contextmanager
 import sys
 import os
@@ -148,14 +148,12 @@ class QwenImage(torch.nn.Module):
         self.aux_time_embed = aux_time_embed
     
         #if aux_time_embed:
-        with temp_patch_module_attr("diffusers", "QwenImageTransformer2DModel", QwenImageTransformer2DModelWrapper):
-            #         transformer_cls = QwenImageTransformer2DModelWrapper
-            # else:
-            #     transformer_cls = QwenImageTransformer2DModel
+        with temp_patch_module_attr("diffusers", "QwenImageTransformer2DModel", QwenImageTransformer2DModel):
+
             if dit_path is not None:
-                qwen_transformer = QwenImageTransformer2DModelWrapper.from_single_file(dit_path,config=os.path.join(model_id, "transformer"),torch_dtype=torch.bfloat16)  
+                qwen_transformer = QwenImageTransformer2DModel.from_single_file(dit_path,config=os.path.join(model_id, "transformer"),torch_dtype=torch.bfloat16)  
             elif gguf_path is not None:
-                qwen_transformer = QwenImageTransformer2DModelWrapper.from_single_file(
+                qwen_transformer = QwenImageTransformer2DModel.from_single_file(
                     gguf_path,
                     config=os.path.join(model_id, "transformer"),
                     quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
@@ -163,12 +161,6 @@ class QwenImage(torch.nn.Module):
             else:
                 raise ValueError("Please provide either dit_path or gguf_path")
             
-        # qwen_transformer = transformer_cls.from_pretrained(
-        #     model_id,
-        #     subfolder="transformer",
-        #     torch_dtype=imgs_dtype,
-        #     low_cpu_mem_usage=False,
-        # )
         VAE=OmegaConf.load(os.path.join(model_id, "vae/config.json")) 
         self.model = QwenImagePipeline.from_pretrained(
             model_id, torch_dtype=imgs_dtype, transformer=qwen_transformer,VAE=VAE,
@@ -184,18 +176,6 @@ class QwenImage(torch.nn.Module):
         self.imgs_dtype = imgs_dtype
         self.text_dtype = text_dtype
 
-        # self.model.vae = (
-        #     self.model.vae.to(dtype=self.imgs_dtype)
-        #     .requires_grad_(False)
-        #     .eval()
-        #     .to(device)
-        # )
-        # self.model.text_encoder = (
-        #     self.model.text_encoder.to(dtype=self.text_dtype)
-        #     .requires_grad_(False)
-        #     .eval()
-        #     .to(device)
-        # )
 
     def forward(self, x_t, t, c, tt=None):
         return self.transformer(x_t, t, c, tt)

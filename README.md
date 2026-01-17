@@ -2,6 +2,9 @@
 [TwinFlow](https://github.com/inclusionAI/TwinFlow): Realizing One-step Generation on Large Models with Self-adversarial Flows - use it in ComfyUI
 
 ## Update
+* Fix if diffusers>0.36.0 got flash attn can't use attn mask error and MAC can't use attn2 (z-image only)  /  高版本或开发版的diffuser的z image 其attn mask 会报错（已知的官方错误），改成常规的，MAC的attn问题可能也是在这里，做了简单的修复；
+* Fix lora can't use  error  修复lora无法使用的问题，加入lora adapter 清理代码，避免混用，可以参考示例图或新的lora节点
+* upload new z-image gguf model，type is lumia2 now  上传新的z image gguf ，减少大小，解决context 都设置为f16的错误，类型改成lunmia2 ，跟city96大佬的一致；
 * Now supports 1-step or any number of steps for image generation. Thanks to [QAQdev](https://github.com/QAQdev) for the code support - please give them a star!
 
 ## Requirements
@@ -55,10 +58,10 @@ pip install -r requirements.txt
 ```
 
 # 4. Example
-* qwen-image
+* qwen-image lora
 ![](https://github.com/smthemex/ComfyUI_TwinFlow/blob/main/example_workflows/example.png)
-* z-image
-![](https://github.com/smthemex/ComfyUI_TwinFlow/blob/main/example_workflows/example-z.png)
+* z-image lora
+![](https://github.com/smthemex/ComfyUI_TwinFlow/blob/main/example_workflows/example_z.png)
 
 # 5. Citation
 ```
